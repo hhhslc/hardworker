@@ -10,6 +10,9 @@ from threading import Thread
 import configparser
 import time
 import sys
+from urllib.request import urlopen
+from bs4 import BeautifulSoup
+import re
 
 
 # 获取每日励志精句
@@ -19,6 +22,25 @@ def get_message():
     content = r.json()['content']
     return note,content
 
+#获取每日天气	
+def get_weather():
+    resp=urlopen('http://www.weather.com.cn/weather/101070201.shtml')
+    soup=BeautifulSoup(resp,'html.parser')
+    tagDate=soup.find('ul', class_="t clearfix")
+    dates=tagDate.h1.string
+    
+    tagToday=soup.find('p', class_="tem")
+    try:
+        temperatureHigh=tagToday.span.string
+    except AttributeError as e:
+        temperatureHigh=tagToday.find_next('p', class_="tem").span.string
+    
+    temperatureLow=tagToday.i.string
+    weather=soup.find('p', class_="wea").string
+    
+    tagWind=soup.find('p',class_="win")
+    winL=tagWind.i.string
+    return winL,temperatureHigh,temperatureLow,weather
 
 # 发送消息给她
 def send_message(your_message):
@@ -53,7 +75,8 @@ def start_care():
         now_time = time.ctime()[-13:-8]
         if (now_time == say_good_morning):
             # 随机取一句问候语
-            message = choice(str_list_good_morning)
+            winL,temperatureHigh,temperatureLow,weather = get_weather()
+            message = choice(str_list_good_morning) + "\n\n" + "小豆天气预报：\n" + "妖妖所在城市：大连" + "\n\n风级: " + winL + "\n\n最高温度: " + temperatureHigh + "\n\n最低温度: " + temperatureLow + "\n\n天气: " + weather
 
             # 是否加上随机表情
             if(flag_wx_emoj):
